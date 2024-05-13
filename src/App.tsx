@@ -27,7 +27,9 @@ function Layout() {
 					<li>
 						<Link to="/check-name">Check Name</Link>
 					</li>
-					<Link to="/check-user-data">Check user Data</Link>
+					<li>
+						<Link to="/check-user-data">Check user Data</Link>
+					</li>
 				</ul>
 			</nav>
 			<hr />
