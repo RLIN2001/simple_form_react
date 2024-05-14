@@ -1,23 +1,63 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
+import { BaseResponse } from "../interfaces";
 
 type Inputs = {
 	name: string;
 	age: number;
 	married?: boolean;
-	birthdate?: string;
+	birthdate: string;
 };
 
 export default function CheckUserData() {
+	const [status, setStatus] = useState<
+		| "INITIAL"
+		| "SEND_DATA"
+		| "SENDING_DATA"
+		| "DATA_SENDED"
+		| "ERROR_SENDING_DATA"
+	>();
+	const [data, setData] = useState<BaseResponse>();
+
 	const {
 		register,
 		handleSubmit,
 		watch,
 		reset,
+		setValue,
 		formState: { errors },
 	} = useForm<Inputs>();
+
+	useEffect(() => {
+		console.log(status);
+	}, [status]);
+
 	const onSubmit: SubmitHandler<Inputs> = (data) => {
-		reset();
+		setStatus("SEND_DATA");
+
+		data.age = Number(data.age);
+		fetch("http://localhost:3001/info/validate-user", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify(data),
+		})
+			.then((rawResponse) => {
+				if ([200, 201].includes(rawResponse.status)) {
+					return rawResponse.json();
+				} else {
+					throw new Error();
+				}
+			})
+			.then((response: BaseResponse) => {
+				setStatus("DATA_SENDED");
+				setData(response);
+				reset();
+			})
+			.catch((e) => {
+				setStatus("ERROR_SENDING_DATA");
+			});
 	};
 
 	const calculateAge = (birthdate: string) => {
@@ -34,6 +74,48 @@ export default function CheckUserData() {
 		}
 		return age;
 	};
+
+	if (status === "ERROR_SENDING_DATA") {
+		return (
+			<div>
+				<h1>ERRORE INVIO DATI</h1>
+				<button onClick={() => setStatus("INITIAL")}>RIPROVA</button>
+			</div>
+		);
+	}
+
+	if (status === "SEND_DATA" || status === "SENDING_DATA") {
+		return (
+			<div>
+				<h1>INVIO IN CORSO</h1>
+				<button onClick={() => setStatus("INITIAL")}>ANNULLA</button>
+			</div>
+		);
+	}
+
+	if (status === "DATA_SENDED") {
+		return (
+			<div>
+				{data?.success === true && <h1>DATI INVIATI VALIDI</h1>}
+				{data?.success === false && (
+					<>
+						<h1>DATI INVIATI NON VALIDI</h1>
+						{data.errors.map((error, index) => (
+							<>
+								{error.constraints &&
+									Object.values(error.constraints).map((message, i) => (
+										<p key={i}>{message}</p>
+									))}
+							</>
+						))}
+					</>
+				)}
+				<button onClick={() => setStatus("INITIAL")}>
+					INVIA UN ALTRO VALORE
+				</button>
+			</div>
+		);
+	}
 	return (
 		<>
 			<h1>INSERISCI I DATI DELL'UTENTE</h1>
@@ -58,7 +140,12 @@ export default function CheckUserData() {
 				<input
 					type="number"
 					placeholder="enter an age"
+					inputMode="numeric"
 					{...register("age", { required: true, min: 1, max: 150 })}
+					onChange={(e) => {
+						const ageValue = parseInt(e.target.value);
+						setValue("age", ageValue);
+					}}
 				/>
 				<br />
 				{errors.age && (
