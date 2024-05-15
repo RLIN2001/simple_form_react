@@ -28,10 +28,6 @@ export default function CheckUserData() {
 		formState: { errors },
 	} = useForm<Inputs>();
 
-	useEffect(() => {
-		console.log(status);
-	}, [status]);
-
 	const onSubmit: SubmitHandler<Inputs> = (data) => {
 		setStatus("SEND_DATA");
 
